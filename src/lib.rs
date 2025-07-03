@@ -4,35 +4,34 @@ mod helpers;
 
 pub use helpers::*;
 
+/// Calculates relative humidity from temperatures and dew point temperature.
+///
+/// Where `t2_k` is the temperature at 2 meters in Kelvin.
+///
+/// Where `td_k` is the dew point temperature in Kelvin.
+///
+/// The return value is relative humidity as a percentage.
+///
+/// Reference: <https://www.theweatherprediction.com/habyhints/186/>
 pub fn calculate_relative_humidity_percent(t2_k: f64, td_k: f64) -> f64 {
-    /*
-    Relative Humidity in percent
-        :param t2_k: (float array) 2m temperature [K]
-        :param td_k: (float array) dew point temperature [K]
-        returns relative humidity [%]
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
     let td_c = kelvin_to_celsius(td_k);
 
-    // saturated vapour pressure
     let es = 6.11 * f64::from(10.0).powf(7.5 * t2_c / (237.3 + t2_c));
 
-    //  vapour pressure
     let e = (6.11) * f64::from(10.0).powf(7.5 * td_c / (237.3 + td_c));
     println!("{t2_c} {td_c}");
     (e / es) * 100.0
 }
 
+/// Calculates saturation vapour pressure over water.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// The return value is saturation vapor pressure over water in the pure phase in hPa (mBar).
+///
+/// Reference: Hardy (1998) [https://www.decatur.de/javascript/dew/resources/its90formulas.pdf](https://www.decatur.de/javascript/dew/resources/its90formulas.pdf)
 pub fn calculate_saturation_vapour_pressure(t2_k: f64) -> f64 {
-    /*
-    Saturation vapour pressure over water
-        :param t2_k: (float array) 2m temperature [K]
-        returns saturation vapor pressure over water in the pure phase [hPa] == [mBar]
-    Reference: Hardy (1998)
-    https://www.decatur.de/javascript/dew/resources/its90formulas.pdf
-    */
-
     let g = [
         -2.8365744e3,
         -6.028076559e3,
@@ -54,22 +53,26 @@ pub fn calculate_saturation_vapour_pressure(t2_k: f64) -> f64 {
     ess
 }
 
+/// Represents the phase of water for saturation vapor pressure calculations.
 pub enum Phase {
+    /// Liquid water phase.
     Liquid,
+    /// Ice phase.
     Ice,
 }
 
+/// Calculates saturation vapour pressure over liquid water or ice.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `phase` specifies whether to calculate over liquid water or ice.
+///
+/// The return value is the pressure of water vapor over a surface of liquid water or ice in hPa (mBar).
+///
+/// Reference: ECMWF IFS Documentation CY45R1 - Part IV : Physical processes (2018) pp. 116 [https://doi.org/10.21957/4whwo8jw0](https://doi.org/10.21957/4whwo8jw0)
+///
+/// See also: [https://metview.readthedocs.io/en/latest/api/functions/saturation_vapour_pressure.html](https://metview.readthedocs.io/en/latest/api/functions/saturation_vapour_pressure.html)
 pub fn calculate_saturation_vapour_pressure_multiphase(t2_k: f64, phase: Phase) -> f64 {
-    /*
-    Saturation vapour pressure over liquid water and ice
-        :param t2_k: (float array) 2m temperature [K]
-        :param phase: 0 over liquid water and 1 over ice
-        returns pressure of water vapor over a surface of liquid water or ice [hPa] == [mBar]
-    Reference: ECMWF IFS Documentation CY45R1 - Part IV : Physical processes (2018) pp. 116
-    https://doi.org/10.21957/4whwo8jw0
-    https://metview.readthedocs.io/en/latest/api/functions/saturation_vapour_pressure.html
-    */
-
     let t0 = 273.16; // triple point of water 273.16 K (0.01 °C) at 611.73 Pa
 
     match phase {
@@ -84,30 +87,30 @@ pub fn calculate_saturation_vapour_pressure_multiphase(t2_k: f64, phase: Phase) 
     }
 }
 
+/// Calculates non-saturated vapour pressure.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `rh` is the relative humidity percentage.
+///
+/// The return value is the non-saturated vapor pressure in hPa (mBar).
+///
+/// Reference: Bureau of Meteorology (2010) [http://www.bom.gov.au/info/thermal_stress/#approximation](http://www.bom.gov.au/info/thermal_stress/#approximation)
 pub fn calculate_nonsaturation_vapour_pressure(t2_k: f64, rh: f64) -> f64 {
-    /*
-    Non saturated vapour pressure
-        :param t2_k: (float array) 2m temperature [K]
-        :param rh: (float array) relative humidity percentage [%]
-        returns non saturated vapor pressure [hPa] == [mBar]
-    Reference: Bureau of Meteorology (2010)
-    http://www.bom.gov.au/info/thermal_stress/#approximation
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
     rh / 100.0 * 6.105 * (17.27 * t2_c / (237.7 + t2_c)).exp()
 }
 
+/// Scales wind speed from 10 meters to a specified height.
+///
+/// Where `va` is the 10m wind speed in m/s.
+///
+/// Where `h` is the target height in meters at which wind speed needs to be scaled.
+///
+/// The return value is the wind speed at height `h`.
+///
+/// Reference: Bröde et al. (2012) [https://doi.org/10.1007/s00484-011-0454-1](https://doi.org/10.1007/s00484-011-0454-1)
 pub fn scale_windspeed(va: f64, h: f64) -> f64 {
-    /*
-    Scaling wind speed from 10 metres to height h
-        :param va: (float array) 10m wind speed [m/s]
-        :param h: (float array) height at which wind speed needs to be scaled [m]
-        returns wind speed at height h
-    Reference: Bröde et al. (2012)
-    https://doi.org/10.1007/s00484-011-0454-1
-    */
-
     let target_height = 10.0;
     let c = 1.0 / f64::from(target_height / 0.01).log10();
     let vh = va * (h / 0.01).log10() * c;
@@ -115,16 +118,17 @@ pub fn scale_windspeed(va: f64, h: f64) -> f64 {
     return vh;
 }
 
+/// Approximates direct solar radiation from total sky direct solar radiation and cosine of solar zenith angle.
+///
+/// Note that the function introduces large errors as `cossza` approaches zero.
+/// Only use if `dsrp` is not available in your dataset.
+///
+/// Where `fdir` is the total sky direct solar radiation at surface in W m-2.
+///
+/// Where `cossza` is the cosine of the solar zenith angle (dimensionless).
+///
+/// The return value is direct radiation from the Sun in W m-2, or `None` if `cossza` is too small.
 pub fn approximate_dsrp(fdir: f64, cossza: f64) -> Option<f64> {
-    /*
-    Helper function to approximate dsrp from fdir and cossza
-    Note that the function introduces large errors as cossza approaches zero.
-    Only use if dsrp is not available in your dataset.
-        :param fdir: (float array) total sky direct solar radiation at surface [W m-2]
-        :param cossza: (float array) cosine of solar zenith angle [dimentionless]
-        returns direct radiation from the Sun [W m-2]
-    */
-
     if cossza <= 0.1 {
         None
     } else {
@@ -132,22 +136,41 @@ pub fn approximate_dsrp(fdir: f64, cossza: f64) -> Option<f64> {
     }
 }
 
+/// Calculates dew point temperature at 2m from relative humidity.
+///
+/// Where `rh` is the relative humidity in percent.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// The return value is the dew point temperature in Kelvin.
+///
+/// Reference: Alduchov and Eskridge (1996) [https://doi.org/10.1175/1520-0450(1996)035<0601:IMFAOS>2.0.CO;2](https://doi.org/10.1175/1520-0450(1996)035<0601:IMFAOS>2.0.CO;2)
 pub fn calculate_dew_point_from_relative_humidity(rh: f64, t2_k: f64) -> f64 {
-    /*
-    Dew point temperature at 2m from relative humidity in percent
-        :param rh: (float array) relative humidity [%]
-        :param t2_k: (float array) 2m temperature [K]
-        returns dew point temperature [K]
-    Reference: Alduchov and Eskridge (1996)
-    https://doi.org/10.1175/1520-0450(1996)035<0601:IMFAOS>2.0.CO;2
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
     let td_c = 243.04 * ((rh / 100.0).ln() + ((17.625 * t2_c) / (243.04 + t2_c)))
         / (17.625 - (rh / 100.0).ln() - ((17.625 * t2_c) / (243.04 + t2_c)));
     celsius_to_kelvin(td_c)
 }
 
+/// Calculates Mean Radiant Temperature (MRT).
+///
+/// Where `ssrd` is the surface solar radiation downwards in W m-2.
+///
+/// Where `ssr` is the surface net solar radiation in W m-2.
+///
+/// Where `dsrp` is the direct solar radiation in W m-2.
+///
+/// Where `strd` is the surface thermal radiation downwards in W m-2.
+///
+/// Where `fdir` is the total sky direct solar radiation at surface in W m-2.
+///
+/// Where `strr` is the surface net thermal radiation in W m-2.
+///
+/// Where `cossza` is the cosine of the solar zenith angle (dimensionless).
+///
+/// The return value is the mean radiant temperature in Kelvin.
+///
+/// Reference: Di Napoli et al. (2020) [https://link.springer.com/article/10.1007/s00484-020-01900-5](https://link.springer.com/article/10.1007/s00484-020-01900-5)
 pub fn calculate_mean_radiant_temperature(
     ssrd: f64,
     ssr: f64,
@@ -157,31 +180,13 @@ pub fn calculate_mean_radiant_temperature(
     strr: f64,
     cossza: f64,
 ) -> f64 {
-    /*
-    MRT - Mean Radiant Temperature
-        :param ssrd: (float array) surface solar radiation downwards [W m-2]
-        :param ssr: (float array) surface net solar radiation [W m-2]
-        :param dsrp: (float array) direct solar radiation [W m-2]
-        :param strd: (float array) surface thermal radiation downwards [W m-2]
-        :param fdir: (float array) total sky direct solar radiation at surface [W m-2]
-        :param strr: (float array) surface net thermal radiation [W m-2]
-        :param cossza: (float array) cosine of solar zenith angle [dimentionless]
-        returns mean radiant temperature [K]
-    Reference: Di Napoli et al. (2020)
-    https://link.springer.com/article/10.1007/s00484-020-01900-5
-    */
-
     let dsw = ssrd - fdir;
     let rsw = ssrd - ssr;
     let lur = strd - strr;
-    // Istar = dsrp
-
-    // calculate fp projected factor area
 
     let gamma = cossza.asin() * 180.0 / PI;
     let fp = 0.308 * ((PI / 180.0) * gamma * (0.998 - gamma * gamma / 50000.0)).cos();
 
-    // calculate mean radiant temperature
     let mrt = ((1.0 / 0.0000000567)
         * (0.5 * strd + 0.5 * lur + (0.7 / 0.97) * (0.5 * dsw + 0.5 * rsw + fp * dsrp)))
         .powf(0.25);
@@ -189,18 +194,20 @@ pub fn calculate_mean_radiant_temperature(
     return mrt;
 }
 
-pub fn calculate_utci_polynomial(t2m: f64, mrt: f64, va: f64, wvp: f64) -> f64 {
-    /*
-    Helper function to calculate the UTCI polynomial approximation
-        :param t2_k: (float array) is 2m temperature [K]
-        :param mrt: (float array) is mean radiant temperature [K]
-        :param va: (float array) is wind speed at 10 meters [m/s]
-        :param wvp: (float array) is water vapour pressure [kPa]
-    returns UTCI [K]
-    Reference: Brode et al. (2012)
-    https://doi.org/10.1007/s00484-011-0454-1
-    */
-
+/// Helper function to calculate the UTCI polynomial approximation.
+///
+/// Where `t2m` is the 2m temperature in Kelvin.
+///
+/// Where `mrt` is the mean radiant temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// Where `wvp` is the water vapour pressure in kPa.
+///
+/// The return value is UTCI in Kelvin.
+///
+/// Reference: Brode et al. (2012) [https://doi.org/10.1007/s00484-011-0454-1](https://doi.org/10.1007/s00484-011-0454-1)
+fn calculate_utci_polynomial(t2m: f64, mrt: f64, va: f64, wvp: f64) -> f64 {
     let e_mrt = mrt - t2m;
 
     let t2m2 = t2m * t2m;
@@ -457,19 +464,22 @@ pub fn calculate_utci_polynomial(t2m: f64, mrt: f64, va: f64, wvp: f64) -> f64 {
     utci
 }
 
+/// Calculates the Universal Thermal Climate Index (UTCI).
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// Where `mrt` is the mean radiant temperature in Kelvin.
+///
+/// Where `td_k` is an optional 2m dew point temperature in Kelvin.
+///
+/// Where `eh_pa` is an optional water vapour pressure in hPa.
+///
+/// The return value is UTCI in Kelvin.
+///
+/// Reference: Brode et al. (2012) [https://doi.org/10.1007/s00484-011-0454-1](https://doi.org/10.1007/s00484-011-0454-1)
 pub fn calculate_utci(t2_k: f64, va: f64, mrt: f64, td_k: Option<f64>, eh_pa: Option<f64>) -> f64 {
-    /*
-    UTCI - Universal Thermal Climate Index
-        :param t2_k: (float array) is 2m temperature [K]
-        :param va: (float array) is wind speed at 10 meters [m/s]
-        :param mrt: (float array) is mean radiant temperature [K]
-        :param td_k: (float array) is 2m dew point temperature [K]
-        :param ehPa: (float array) is water vapour pressure [hPa]
-    returns UTCI [K]
-    Reference: Brode et al. (2012)
-    https://doi.org/10.1007/s00484-011-0454-1
-    */
-
     let wvp: f64;
 
     if let Some(eh_pa) = eh_pa {
@@ -493,18 +503,20 @@ pub fn calculate_utci(t2_k: f64, va: f64, mrt: f64, td_k: Option<f64>, eh_pa: Op
     return utci_k;
 }
 
+/// Calculates Wet Bulb Globe Temperature (WBGT) using a simplified algorithm.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `rh` is the relative humidity percentage.
+///
+/// The return value is the Wet Bulb Globe Temperature in Kelvin.
+///
+/// Reference: ACSM (1984) [https://doi.org/10.1080/00913847.1984.11701899](https://doi.org/10.1080/00913847.1984.11701899)
+///
+/// See also: [http://www.bom.gov.au/info/thermal_stress/#approximation](http://www.bom.gov.au/info/thermal_stress/#approximation)
+///
+/// See also: [https://www.jstage.jst.go.jp/article/indhealth/50/4/50_MS1352/_pdf](https://www.jstage.jst.go.jp/article/indhealth/50/4/50_MS1352/_pdf)
 pub fn calculate_wbgt_simple(t2_k: f64, rh: f64) -> f64 {
-    /*
-    WBGT - Wet Bulb Globe Temperature computed by a the simpler algorithm
-        :param t2_k: (float array) 2m temperature [K]
-        :param rh: (float array) relative humidity percentage [%]
-        returns Wet Bulb Globe Temperature [K]
-    Reference: ACSM (1984)
-    https://doi.org/10.1080/00913847.1984.11701899
-    See also: http://www.bom.gov.au/info/thermal_stress/#approximation
-    https://www.jstage.jst.go.jp/article/indhealth/50/4/50_MS1352/_pdf
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
     let e = calculate_nonsaturation_vapour_pressure(t2_k, rh);
     let wbgt = 0.567 * t2_c + 0.393 * e + 3.94;
@@ -513,16 +525,16 @@ pub fn calculate_wbgt_simple(t2_k: f64, rh: f64) -> f64 {
     return wbgt_k;
 }
 
+/// Calculates Wet Bulb Temperature.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `rh` is the relative humidity percentage.
+///
+/// The return value is the wet bulb temperature in Kelvin.
+///
+/// Reference: Stull (2011) [https://doi.org/10.1175/JAMC-D-11-0143.1](https://doi.org/10.1175/JAMC-D-11-0143.1)
 pub fn calculate_wbt(t2_k: f64, rh: f64) -> f64 {
-    /*
-    Wet Bulb Temperature
-        :param t2_k: (float array) 2m temperature [K]
-        :param rh: (float array) relative humidity percentage [%]
-        returns wet bulb temperature [K]
-    Reference: Stull (2011)
-    https://doi.org/10.1175/JAMC-D-11-0143.1
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
     let tw = t2_c * (0.151977 * (rh + 8.313659).sqrt()).atan() + (t2_c + rh).atan()
         - (rh - 1.676331).atan()
@@ -531,20 +543,20 @@ pub fn calculate_wbt(t2_k: f64, rh: f64) -> f64 {
     celsius_to_kelvin(tw)
 }
 
+/// Calculates Globe Temperature.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `mrt` is the mean radiant temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// The return value is the globe temperature in Kelvin.
+///
+/// Reference: Guo et al. 2018 [https://doi.org/10.1016/j.enbuild.2018.08.029](https://doi.org/10.1016/j.enbuild.2018.08.029)
 pub fn calculate_bgt(t2_k: f64, mrt: f64, va: f64) -> f64 {
-    /*
-    Globe temperature
-        :param t2_k: (float array) 2m temperature [K]
-        :param mrt: (float array) mean radiant temperature [K]
-        :param va: (float array) wind speed at 10 meters [m/s]
-        returns globe temperature [K]
-    Reference: Guo et al. 2018
-    https://doi.org/10.1016/j.enbuild.2018.08.029
-    */
-
     let v = scale_windspeed(va, 1.1); // formula requires wind speed at 1.1m (i.e., at the level of the globe)
 
-    // # a = 1
     let d = (1.1e8 * v.powf(0.6)) / (0.95 * f64::from(0.15).powf(0.4));
     let e = -(mrt.powi(4)) - d * t2_k;
 
@@ -558,19 +570,22 @@ pub fn calculate_bgt(t2_k: f64, mrt: f64, va: f64) -> f64 {
     return bgt;
 }
 
+/// Calculates Wet Bulb Globe Temperature (WBGT).
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `mrt` is the mean radiant temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// Where `td_k` is the dew point temperature in Kelvin.
+///
+/// The return value is the wet bulb globe temperature in Kelvin.
+///
+/// Reference: Stull (2011) [https://doi.org/10.1175/JAMC-D-11-0143.1](https://doi.org/10.1175/JAMC-D-11-0143.1)
+///
+/// See also: [http://www.bom.gov.au/info/thermal_stress/](http://www.bom.gov.au/info/thermal_stress/)
 pub fn calculate_wbgt(t2_k: f64, mrt: f64, va: f64, td_k: f64) -> f64 {
-    /*
-    WBGT - Wet Bulb Globe Temperature
-        :param t2_k: (float array) 2m temperature [K]
-        :param mrt: (float array) mean radiant temperature [K]
-        :param va: (float array) wind speed at 10 meters [m/s]
-        :param td_k: (float array) dew point temperature [K]
-        returns wet bulb globe temperature [K]
-    Reference: Stull (2011)
-    https://doi.org/10.1175/JAMC-D-11-0143.1
-    See also: http://www.bom.gov.au/info/thermal_stress/
-    */
-
     let bgt_k = calculate_bgt(t2_k, mrt, va);
     let bgt_c = kelvin_to_celsius(bgt_k);
 
@@ -585,18 +600,19 @@ pub fn calculate_wbgt(t2_k: f64, mrt: f64, va: f64, td_k: f64) -> f64 {
     return wbgt_k;
 }
 
+/// Calculates Mean Radiant Temperature from Globe Temperature.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `bgt_k` is the globe temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// The return value is the mean radiant temperature in Kelvin.
+///
+/// Reference: Brimicombe et al. (2023) [https://doi.org/10.1029/2022GH000701](https://doi.org/10.1029/2022GH000701)
 pub fn calculate_mrt_from_bgt(t2_k: f64, bgt_k: f64, va: f64) -> f64 {
-    /*
-    Mean radiant temperature from globe temperature
-        :param t2_k: (float array) 2m temperature [K]
-        :param bgt_k: (float array) globe temperature [K]
-        :param va: (float array) wind speed at 10 meters [m/s]
-        returns mean radiant temperature [K]
-    Reference: Brimicombe et al. (2023)
-    https://doi.org/10.1029/2022GH000701
-    */
-
-    let v = scale_windspeed(va, 1.1); //  # formula requires wind speed at 1.1m (i.e., at the level of the globe)
+    let v = scale_windspeed(va, 1.1); // formula requires wind speed at 1.1m (i.e., at the level of the globe)
     let f = (1.1e8 * v.powf(0.6)) / (0.95 * f64::from(0.15).powf(0.4));
     let bgt4 = bgt_k.powi(4);
     let mrtc = bgt4 + f * (bgt_k - t2_k);
@@ -605,36 +621,37 @@ pub fn calculate_mrt_from_bgt(t2_k: f64, bgt_k: f64, va: f64) -> f64 {
     return mrtc2;
 }
 
+/// Calculates Humidex.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `td_k` is the dew point temperature in Kelvin.
+///
+/// The return value is Humidex in Kelvin.
+///
+/// Reference: Blazejczyk et al. (2012) [https://doi.org/10.1007/s00484-011-0453-2](https://doi.org/10.1007/s00484-011-0453-2)
 pub fn calculate_humidex(t2_k: f64, td_k: f64) -> f64 {
-    /*
-        Humidex
-        :param t2_k: (float array) 2m temperature [K]
-        :param td_k: (float array) dew point temperature [K]
-        returns humidex [K]
-    Reference: Blazejczyk et al. (2012)
-    https://doi.org/10.1007/s00484-011-0453-2
-    */
-
-    let vp = 6.11 * f64::from(5417.7530 * ((1.0 / 273.16) - (1.0 / td_k))).exp(); // # vapour pressure [hPa]
+    let vp = 6.11 * f64::from(5417.7530 * ((1.0 / 273.16) - (1.0 / td_k))).exp(); // vapour pressure [hPa]
     let h = 0.5555 * (vp - 10.0);
     let humidex = t2_k + h;
 
     return humidex;
 }
 
+/// Calculates Normal Effective Temperature (NET).
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// Where `rh` is the relative humidity percentage.
+///
+/// The return value is the normal effective temperature in Kelvin.
+///
+/// Reference: Li and Chan (2006) [https://doi.org/10.1017/S1350482700001602](https://doi.org/10.1017/S1350482700001602)
 pub fn calculate_normal_effective_temperature(t2_k: f64, va: f64, rh: f64) -> f64 {
-    /*
-    NET - Normal Effective Temperature
-        :param t2_k: (float array) 2m temperature [K]
-        :param va: (float array) wind speed at 10 meters [m/s]
-        :param rh: (float array) relative humidity percentage [%]
-        returns normal effective temperature [K]
-    Reference: Li and Chan (2006)
-    https://doi.org/10.1017/S1350482700001602
-    */
-
     let t2_k = kelvin_to_celsius(t2_k);
-    let v = scale_windspeed(va, 1.2); //  # formula requires wind speed at 1.2m
+    let v = scale_windspeed(va, 1.2); // formula requires wind speed at 1.2m
     let ditermeq = 1.0 / (1.76 + 1.4 * v.powf(0.75));
     let net =
         37.0 - ((37.0 - t2_k) / (0.68 - 0.0014 * rh + ditermeq)) - 0.29 * t2_k * (1.0 - 0.01 * rh);
@@ -643,18 +660,20 @@ pub fn calculate_normal_effective_temperature(t2_k: f64, va: f64, rh: f64) -> f6
     return net_k;
 }
 
+/// Calculates Apparent Temperature
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// Where `rh` is the relative humidity percentage.
+///
+/// The return value is the apparent temperature in Kelvin.
+///
+/// Reference: Steadman (1984) [https://doi.org/10.1175/1520-0450(1984)023%3C1674:AUSOAT%3E2.0.CO;2](https://doi.org/10.1175/1520-0450(1984)023%3C1674:AUSOAT%3E2.0.CO;2)
+///
+/// See also: [http://www.bom.gov.au/info/thermal_stress/#atapproximation](http://www.bom.gov.au/info/thermal_stress/#atapproximation)
 pub fn calculate_apparent_temperature(t2_k: f64, va: f64, rh: f64) -> f64 {
-    /*
-    Apparent Temperature - version without radiation
-        :param t2_k: (float array) 2m temperature [K]
-        :param va: (float array) wind speed at 10 meters [m/s]
-        :param rh: (float array) relative humidity percentage [%]
-        returns apparent temperature [K]
-    Reference: Steadman (1984)
-    https://doi.org/10.1175/1520-0450(1984)023%3C1674:AUSOAT%3E2.0.CO;2
-    See also: http://www.bom.gov.au/info/thermal_stress/#atapproximation
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
     let e = calculate_nonsaturation_vapour_pressure(t2_k, rh);
     println!("{t2_k} {e} {rh}");
@@ -664,19 +683,21 @@ pub fn calculate_apparent_temperature(t2_k: f64, va: f64, rh: f64) -> f64 {
     return at_k;
 }
 
+/// Calculates Wind Chill.
+///
+/// Where `t2_k` is the 2m Temperature in Kelvin.
+///
+/// Where `va` is the wind speed at 10 meters in m/s.
+///
+/// The return value is the wind chill in Kelvin.
+///
+/// Computation is only valid for temperatures between -50°C and 5°C and wind speeds between 5km/h and 80km/h.
+/// For input values outside those ranges, computed results should not be considered valid.
+///
+/// Reference: Blazejczyk et al. (2012) [https://doi.org/10.1007/s00484-011-0453-2](https://doi.org/10.1007/s00484-011-0453-2)
+///
+/// See also: [https://web.archive.org/web/20130627223738/http://climate.weatheroffice.gc.ca/prods_servs/normals_documentation_e.html](https://web.archive.org/web/20130627223738/http://climate.weatheroffice.gc.ca/prods_servs/normals_documentation_e.html)
 pub fn calculate_wind_chill(t2_k: f64, va: f64) -> f64 {
-    /*
-    Wind Chill
-        :param t2_k: (float array) 2m Temperature [K]
-        :param va: (float array) wind speed at 10 meters [m/s]
-        returns wind chill [K]
-        Computation is only valid for temperatures between -50°C and 5°C and wind speeds between 5km/h and 80km/h.
-        For input values outside those ranges, computed results not be considered valid.
-    Reference: Blazejczyk et al. (2012)
-    https://doi.org/10.1007/s00484-011-0453-2
-    See also: https://web.archive.org/web/20130627223738/http://climate.weatheroffice.gc.ca/prods_servs/normals_documentation_e.html  # noqa
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
     let v = va * 3.6; // convert to kilometers per hour
     let windchill = 13.12 + 0.6215 * t2_c - 11.37 * v.powf(0.16) + 0.3965 * t2_c * v.powf(0.16);
@@ -685,16 +706,16 @@ pub fn calculate_wind_chill(t2_k: f64, va: f64) -> f64 {
     return windchill_k;
 }
 
+/// Calculates Heat Index using a simplified method.
+///
+/// Where `t2m` is the 2m temperature in Kelvin.
+///
+/// Where `rh` is the relative humidity percentage.
+///
+/// The return value is the heat index in Kelvin, or `None` if the temperature is too low.
+///
+/// Reference: Blazejczyk et al. (2012) [https://doi.org/10.1007/s00484-011-0453-2](https://doi.org/10.1007/s00484-011-0453-2)
 pub fn calculate_heat_index_simplified(t2_k: f64, rh: f64) -> Option<f64> {
-    /*
-    Heat Index
-        :param t2m: (float array) 2m temperature [K]
-        :param rh: (float array) relative humidity [%]
-        returns heat index [K]
-    Reference: Blazejczyk et al. (2012)
-    https://doi.org/10.1007/s00484-011-0453-2
-    */
-
     let t2_c = kelvin_to_celsius(t2_k);
 
     let hiarray = [
@@ -726,15 +747,16 @@ pub fn calculate_heat_index_simplified(t2_k: f64, rh: f64) -> Option<f64> {
     return Some(hi_k);
 }
 
+/// Calculates Heat Index with adjustments.
+///
+/// Where `t2_k` is the 2m temperature in Kelvin.
+///
+/// Where `td_k` is the 2m dewpoint temperature in Kelvin.
+///
+/// The return value is the heat index in Kelvin, or `None` if conditions are not met for calculation.
+///
+/// Reference: [https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml](https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml)
 pub fn calculate_heat_index_adjusted(t2_k: f64, td_k: f64) -> Option<f64> {
-    /*
-    Heat Index adjusted
-       :param t2_k: (float array) 2m temperature [K]
-       :param td_k: (float array) 2m dewpoint temperature  [K]
-       returns heat index [K]
-    Reference: https://www.wpc.ncep.noaa.gov/html/heatindex_equation.shtml
-    */
-
     let rh = calculate_relative_humidity_percent(t2_k, td_k);
     let t2_f = kelvin_to_fahrenheit(t2_k);
 
