@@ -54,6 +54,8 @@ pub fn calculate_saturation_vapour_pressure(t2_k: f64) -> f64 {
 }
 
 /// Represents the phase of water for saturation vapor pressure calculations.
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Phase {
     /// Liquid water phase.
     Liquid,
