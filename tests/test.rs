@@ -5,10 +5,8 @@ use std::path::Path;
 use csv::ReaderBuilder;
 use serde::Deserialize;
 
-// Import all functions from your thermofeel_lib crate
 use thermofeel_rs::*;
 
-// Define a struct to deserialize the main test cases CSV
 #[derive(Debug, Deserialize)]
 struct TestCaseRow {
     t2m: f64,
@@ -25,14 +23,13 @@ struct TestCaseRow {
     va_height: f64,
 }
 
-// Helper function to load a single-column CSV into a Vec<f64>
 fn load_single_column_csv(filename: &str) -> io::Result<Vec<f64>> {
     let path = Path::new("tests").join("data").join(filename);
 
     eprintln!("{:?}", path);
     let file = File::open(&path)?;
     let reader = BufReader::new(file);
-    let mut rdr = ReaderBuilder::new().has_headers(false).from_reader(reader); // No headers for single-column files
+    let mut rdr = ReaderBuilder::new().has_headers(false).from_reader(reader);
     let mut records = Vec::new();
     for result in rdr.records() {
         let record = result?;
@@ -47,7 +44,6 @@ fn load_single_column_csv(filename: &str) -> io::Result<Vec<f64>> {
     Ok(records)
 }
 
-// Helper function to load the main test cases CSV
 fn load_test_cases_csv(filename: &str) -> io::Result<Vec<TestCaseRow>> {
     let path = Path::new("tests").join("data").join(filename);
 
@@ -61,7 +57,6 @@ fn load_test_cases_csv(filename: &str) -> io::Result<Vec<TestCaseRow>> {
     Ok(records)
 }
 
-// Custom assertion for floating-point numbers
 fn assert_almost_equal(
     expected: f64,
     actual: f64,
@@ -81,21 +76,6 @@ fn assert_almost_equal(
         );
     }
 }
-
-// --- Test Functions ---
-
-// Not impmented in original code
-// #[test]
-// fn test_relative_humidity_percent() -> io::Result<()> {
-//     let test_cases = load_test_cases_csv("thermofeel_testcases.csv")?;
-//     let expected_rh = load_single_column_csv("rh.csv")?;
-
-//     for (i, case) in test_cases.iter().enumerate() {
-//         let rh = calculate_relative_humidity_percent(case.t2m, case.td);
-//         assert_almost_equal(expected_rh[i], rh, 6, "test_relative_humidity_percent", i);
-//     }
-//     Ok(())
-// }
 
 #[test]
 fn test_saturation_vapour_pressure() -> io::Result<()> {
@@ -168,25 +148,6 @@ fn test_scale_windspeed() -> io::Result<()> {
     }
     Ok(())
 }
-
-// #[test]
-// fn test_dew_point_from_relative_humidity() -> io::Result<()> {
-//     let test_cases = load_test_cases_csv("thermofeel_testcases.csv")?;
-//     let expected_td = load_single_column_csv("td.csv")?; // Assuming td.csv contains the original td values
-
-//     for (i, case) in test_cases.iter().enumerate() {
-//         let rh = calculate_relative_humidity_percent(case.t2m, case.td); // Recalculate RH for consistency
-//         let td = calculate_dew_point_from_relative_humidity(rh, case.t2m);
-//         assert_almost_equal(
-//             expected_td[i],
-//             td,
-//             2,
-//             "test_dew_point_from_relative_humidity",
-//             i,
-//         );
-//     }
-//     Ok(())
-// }
 
 #[test]
 fn test_mean_radiant_temperature() -> io::Result<()> {

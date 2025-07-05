@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn test_bgt() {
         let t2_k = [278.15, 300.0, 300.0];
-        let va = [20.0, 20.0, -10.0]; // negative va values are treated as 0
+        let va = [20.0, 20.0, -10.0];
         let mrt = [278.15, 310.0, 310.0];
 
         let mut bgt = Vec::new();
@@ -109,8 +109,6 @@ mod tests {
         for i in 0..3 {
             bgt.push(calculate_bgt(t2_k[i], va[i], mrt[i]));
         }
-
-        // Assuming calculate_bgt can handle slices/vectors and returns a vector
 
         assert_relative_eq!(bgt[0], 277.1238737724192, epsilon = 1e-6);
         assert_relative_eq!(bgt[1], 298.70218703427656, epsilon = 1e-6);
@@ -171,12 +169,12 @@ mod tests {
 
         // reference result from wikipedia article https://en.wikipedia.org/wiki/Wind_chill
         let t2_k_wiki_1 = celsius_to_kelvin(-20.0); // -20C to K
-        let va_wiki_1 = 5.0 / 3.6; // 5 km/h to m/s
+        let va_wiki_1 = 5.0 / 3.6;
         let wc_k_wiki_1 = calculate_wind_chill(t2_k_wiki_1, va_wiki_1);
         let wc_c_wiki_1 = kelvin_to_celsius(wc_k_wiki_1);
         assert_relative_eq!(wc_c_wiki_1, -24.27850328, epsilon = 1e-6);
 
-        let va_wiki_2 = 30.0 / 3.6; // 30 km/h to m/s
+        let va_wiki_2 = 30.0 / 3.6;
         let wc_k_wiki_2 = calculate_wind_chill(t2_k_wiki_1, va_wiki_2);
         let wc_c_wiki_2 = kelvin_to_celsius(wc_k_wiki_2);
         assert_relative_eq!(wc_c_wiki_2, -32.56804448, epsilon = 1e-6);
